@@ -2,109 +2,86 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Merry Christmas - The Masterpiece</title>
+    <title>The Perfect Christmas Tree</title>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Great+Vibes&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
-        #ui-layer { position: fixed; width: 100%; height: 100%; background: radial-gradient(circle, #1a1a1a, #000); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; transition: 1.5s; }
-        .title { font-family: 'Great Vibes', cursive; font-size: 5rem; color: #fff; text-shadow: 0 0 20px gold; margin-bottom: 30px; }
-        #start-btn { padding: 15px 60px; border-radius: 50px; background: gold; border: none; font-family: 'Dancing Script', cursive; font-size: 2.2rem; cursor: pointer; box-shadow: 0 0 30px gold; }
-        #name-tag { position: fixed; bottom: 30px; right: 30px; font-family: 'Dancing Script', cursive; font-size: 2rem; color: gold; opacity: 0; transition: 3s; z-index: 500; text-shadow: 2px 2px 10px #000; }
-        .hidden { opacity: 0; pointer-events: none; }
+        #intro { position: fixed; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999; }
+        .gift-title { font-family: 'Great Vibes', cursive; font-size: 5rem; color: #fff; text-shadow: 0 0 20px gold; margin-bottom: 30px; }
+        #open-btn { padding: 15px 60px; border-radius: 50px; background: gold; border: none; font-family: 'Dancing Script', cursive; font-size: 2.2rem; cursor: pointer; box-shadow: 0 0 30px gold; }
+        #footer-name { position: fixed; bottom: 30px; right: 30px; font-family: 'Dancing Script', cursive; font-size: 2rem; color: gold; opacity: 0; transition: 3s; z-index: 100; text-shadow: 2px 2px 10px #000; }
     </style>
 </head>
 <body>
-    <div id="ui-layer">
-        <div class="title">Merry Christmas</div>
-        <button id="start-btn" onclick="startMagic()">Bấm để mở quà</button>
+    <div id="intro">
+        <div class="gift-title">Merry Christmas</div>
+        <button id="open-btn" onclick="startShow()">Chạm để mở quà</button>
     </div>
-    <div id="name-tag">Gửi tặng [Tên Người Nhận] 🎄</div>
-    <audio id="bgm" loop><source src="https://www.chosic.com/wp-content/uploads/2021/11/Let-it-snow-Let-it-snow-Let-it-snow.mp3" type="audio/mpeg"></audio>
+    <div id="footer-name">Gửi tặng Bạn 🎄</div>
+    <audio id="music" loop><source src="https://www.chosic.com/wp-content/uploads/2021/11/Let-it-snow-Let-it-snow-Let-it-snow.mp3" type="audio/mpeg"></audio>
 
     <script>
-        /** * TÁI HIỆN CÂY THÔNG 50.000 HẠT SÁNG
-         */
-        let scene, camera, renderer, particles, snow, targetPositions;
-        const P_COUNT = 50000; // Số lượng hạt cực lớn để đạt độ nét như ảnh
-        let mouseX = 0, mouseY = 0;
+        let scene, camera, renderer, particles, targets;
+        const P_COUNT = 60000; // 6 vạn hạt để cây thông cực kỳ dày và lộng lẫy
 
-        function startMagic() {
-            document.getElementById('ui-layer').classList.add('hidden');
-            document.getElementById('name-tag').style.opacity = '1';
-            document.getElementById('bgm').play();
-            init();
+        function startShow() {
+            document.getElementById('intro').style.display = 'none';
+            document.getElementById('footer-name').style.opacity = '1';
+            document.getElementById('music').play();
+            initApp();
         }
 
-        function createTreeShape() {
+        function createTreePoints() {
             const data = new Float32Array(P_COUNT * 3);
             for (let i = 0; i < P_COUNT; i++) {
                 let x, y, z;
-                if (i < P_COUNT * 0.75) { // Dựng thân cây hình nón dày
-                    let h = Math.random() * 60;
-                    let r = (60 - h) * 0.38 * (Math.pow(Math.random(), 0.5) + 0.5);
+                if (i < P_COUNT * 0.8) { // THÂN CÂY THÔNG TẦNG LỚP
+                    let h = Math.random() * 65;
+                    let r = (65 - h) * 0.35 * (Math.pow(Math.random(), 0.6) + 0.4);
                     let t = Math.random() * Math.PI * 2;
-                    x = r * Math.cos(t); y = h - 30; z = r * Math.sin(t);
-                } else if (i < P_COUNT * 0.82) { // Ngôi sao rực rỡ trên đỉnh
+                    x = r * Math.cos(t); y = h - 35; z = r * Math.sin(t);
+                } else if (i < P_COUNT * 0.9) { // NGÔI SAO VÀNG RỰC RỠ TRÊN ĐỈNH
                     let t = Math.random() * Math.PI * 2;
-                    let r = 5 * Math.random();
-                    x = Math.cos(t) * r; y = 32 + (Math.random()*5); z = Math.sin(t) * r;
-                } else { // Các hộp quà màu sắc dưới gốc
-                    x = (Math.random()-0.5)*55; y = -30 + Math.random()*10; z = (Math.random()-0.5)*55;
+                    let r = 6 * Math.random();
+                    x = Math.cos(t) * r; y = 33 + Math.random()*5; z = Math.sin(t) * r;
+                } else { // CÁC HỘP QUÀ SẮC MÀU DƯỚI GỐC
+                    x = (Math.random()-0.5)*60; y = -35 + Math.random()*12; z = (Math.random()-0.5)*60;
                 }
                 data[i*3] = x; data[i*3+1] = y; data[i*3+2] = z;
             }
             return data;
         }
 
-        function init() {
+        function initApp() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-            camera.position.z = 100;
-
+            camera.position.z = 110;
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
+            targets = createTreePoints();
             const geo = new THREE.BufferGeometry();
-            const positions = new Float32Array(P_COUNT * 3);
-            const colors = new Float32Array(P_COUNT * 3);
-            targetPositions = createTreeShape();
+            const pos = new Float32Array(P_COUNT * 3);
+            const col = new Float32Array(P_COUNT * 3);
 
             for (let i = 0; i < P_COUNT; i++) {
-                // Tọa độ khởi tạo (bay từ ngoài vào)
-                positions[i*3] = (Math.random()-0.5)*800;
-                positions[i*3+1] = (Math.random()-0.5)*800;
-                positions[i*3+2] = (Math.random()-0.5)*800;
-
-                let col = new THREE.Color();
+                // Hạt bay từ không gian vào
+                pos[i*3] = (Math.random()-0.5)*1000; pos[i*3+1] = (Math.random()-0.5)*1000; pos[i*3+2] = (Math.random()-0.5)*1000;
+                
+                let c = new THREE.Color();
                 let r = Math.random();
-                if (r > 0.8) col.setHex(0xffd700); // Vàng Gold
-                else if (r > 0.5) col.setHex(0xff0000); // Đỏ Noel
-                else col.setHex(0xffffff); // Trắng
-                colors[i*3] = col.r; colors[i*3+1] = col.g; colors[i*3+2] = col.b;
+                if (r > 0.8) c.setHex(0xffd700); // Vàng
+                else if (r > 0.4) c.setHex(0xff3333); // Đỏ
+                else c.setHex(0xffffff); // Trắng
+                col[i*3] = c.r; col[i*3+1] = c.g; col[i*3+2] = c.b;
             }
 
-            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-            particles = new THREE.Points(geo, new THREE.PointsMaterial({
-                size: 0.35, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true
-            }));
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+            particles = new THREE.Points(geo, new THREE.PointsMaterial({size: 0.35, vertexColors: true, blending: THREE.AdditiveBlending}));
             scene.add(particles);
-
-            // Thêm hiệu ứng tuyết rơi nền
-            const snowGeo = new THREE.BufferGeometry();
-            const snowPos = new Float32Array(15000 * 3);
-            for(let i=0; i<45000; i++) snowPos[i] = (Math.random()-0.5)*500;
-            snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
-            snow = new THREE.Points(snowGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.15}));
-            scene.add(snow);
-
-            document.addEventListener('mousemove', (e) => {
-                mouseX = (e.clientX - window.innerWidth/2) / 10;
-                mouseY = (e.clientY - window.innerHeight/2) / 10;
-            });
 
             animate();
         }
@@ -113,6 +90,12 @@
             requestAnimationFrame(animate);
             const p = particles.geometry.attributes.position.array;
             for (let i = 0; i < P_COUNT * 3; i++) {
-                p[i] += (targetPositions[i] - p[i]) * 0.05;
+                p[i] += (targets[i] - p[i]) * 0.04;
             }
             particles.geometry.attributes.position.needsUpdate = true;
+            particles.rotation.y += 0.005;
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

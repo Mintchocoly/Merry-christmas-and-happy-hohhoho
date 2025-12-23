@@ -2,156 +2,117 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Magic Christmas Hand Tracking</title>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <title>Merry Christmas - The Masterpiece</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Great+Vibes&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Dancing Script', cursive; }
-        #start-screen { position: fixed; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999; }
-        #start-btn { padding: 20px 80px; font-size: 2.5rem; background: gold; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 0 30px gold; }
-        #name-tag { position: fixed; bottom: 20px; right: 20px; color: gold; font-size: 1.5rem; z-index: 100; }
-        video { display: none; } /* Ẩn video camera gốc */
-        canvas#webgl-canvas { position: absolute; top: 0; left: 0; }
-        .instruction { color: white; margin-top: 20px; font-size: 1.2rem; opacity: 0.8; }
+        body { margin: 0; overflow: hidden; background: #000; }
+        #ui-layer { position: fixed; width: 100%; height: 100%; background: radial-gradient(circle, #1a1a1a, #000); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; transition: 1.5s; }
+        .title { font-family: 'Great Vibes', cursive; font-size: 5rem; color: #fff; text-shadow: 0 0 20px gold; margin-bottom: 30px; }
+        #start-btn { padding: 15px 60px; border-radius: 50px; background: gold; border: none; font-family: 'Dancing Script', cursive; font-size: 2.2rem; cursor: pointer; box-shadow: 0 0 30px gold; }
+        #name-tag { position: fixed; bottom: 30px; right: 30px; font-family: 'Dancing Script', cursive; font-size: 2rem; color: gold; opacity: 0; transition: 3s; z-index: 500; text-shadow: 2px 2px 10px #000; }
+        .hidden { opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body>
+    <div id="ui-layer">
+        <div class="title">Merry Christmas</div>
+        <button id="start-btn" onclick="startMagic()">Bấm để mở quà</button>
+    </div>
+    <div id="name-tag">Gửi tặng [Tên Người Nhận] 🎄</div>
+    <audio id="bgm" loop><source src="https://www.chosic.com/wp-content/uploads/2021/11/Let-it-snow-Let-it-snow-Let-it-snow.mp3" type="audio/mpeg"></audio>
 
-<div id="start-screen">
-    <h1 style="color: white; font-size: 4rem; text-shadow: 0 0 20px red;">Christmas Magic</h1>
-    <button id="start-btn">Start</button>
-    <p class="instruction">Hãy cho phép sử dụng Camera để điều khiển bằng tay!</p>
-</div>
+    <script>
+        /** * TÁI HIỆN CÂY THÔNG 50.000 HẠT SÁNG
+         */
+        let scene, camera, renderer, particles, snow, targetPositions;
+        const P_COUNT = 50000; // Số lượng hạt cực lớn để đạt độ nét như ảnh
+        let mouseX = 0, mouseY = 0;
 
-<div id="name-tag">Gửi tặng [Tên Của Bạn] 🎄</div>
-<video id="input_video"></video>
-<audio id="bgm" loop><source src="https://www.chosic.com/wp-content/uploads/2021/11/Let-it-snow-Let-it-snow-Let-it-snow.mp3" type="audio/mpeg"></audio>
+        function startMagic() {
+            document.getElementById('ui-layer').classList.add('hidden');
+            document.getElementById('name-tag').style.opacity = '1';
+            document.getElementById('bgm').play();
+            init();
+        }
 
-<script>
-    // --- KHỐI DỮ LIỆU VÀ BIẾN TOÀN CỤC (600+ LINES LOGIC) ---
-    const videoElement = document.getElementById('input_video');
-    const startBtn = document.getElementById('start-btn');
-    const bgm = document.getElementById('bgm');
-    let scene, camera, renderer, particles, snow, handX = 0, handY = 0;
-    const PARTICLE_COUNT = 45000; // Đảm bảo dày như ảnh mẫu
-    let targetPositions = new Float32Array(PARTICLE_COUNT * 3);
-    let state = 0;
-
-    // 1. Khởi tạo Hình dạng 3D (Cây thông, Hộp quà)
-    function initShapes() {
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-            let x, y, z;
-            if (state === 0) { // CÂY THÔNG 3D CHI TIẾT
-                if (i < PARTICLE_COUNT * 0.7) {
+        function createTreeShape() {
+            const data = new Float32Array(P_COUNT * 3);
+            for (let i = 0; i < P_COUNT; i++) {
+                let x, y, z;
+                if (i < P_COUNT * 0.75) { // Dựng thân cây hình nón dày
                     let h = Math.random() * 60;
-                    let r = (60 - h) * 0.4;
-                    let theta = Math.random() * Math.PI * 2;
-                    x = r * Math.cos(theta); y = h - 30; z = r * Math.sin(theta);
-                } else if (i < PARTICLE_COUNT * 0.8) { // Ngôi sao đỉnh
+                    let r = (60 - h) * 0.38 * (Math.pow(Math.random(), 0.5) + 0.5);
                     let t = Math.random() * Math.PI * 2;
-                    x = Math.cos(t) * 4; y = 33 + Math.random() * 4; z = Math.sin(t) * 4;
-                } else { // Hộp quà
-                    x = (Math.random()-0.5)*50; y = -30 + Math.random()*10; z = (Math.random()-0.5)*50;
+                    x = r * Math.cos(t); y = h - 30; z = r * Math.sin(t);
+                } else if (i < P_COUNT * 0.82) { // Ngôi sao rực rỡ trên đỉnh
+                    let t = Math.random() * Math.PI * 2;
+                    let r = 5 * Math.random();
+                    x = Math.cos(t) * r; y = 32 + (Math.random()*5); z = Math.sin(t) * r;
+                } else { // Các hộp quà màu sắc dưới gốc
+                    x = (Math.random()-0.5)*55; y = -30 + Math.random()*10; z = (Math.random()-0.5)*55;
                 }
-            } else { // PHÁO HOA
-                let r = 50 * Math.sqrt(Math.random());
-                let t = Math.random() * Math.PI * 2;
-                x = r * Math.cos(t); y = 40 - (r*r/10) - Math.random()*20; z = r * Math.sin(t);
+                data[i*3] = x; data[i*3+1] = y; data[i*3+2] = z;
             }
-            targetPositions[i*3] = x; targetPositions[i*3+1] = y; targetPositions[i*3+2] = z;
-        }
-    }
-
-    // 2. Thiết lập Three.js
-    function setupThree() {
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-        camera.position.z = 120;
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        const geo = new THREE.BufferGeometry();
-        const pos = new Float32Array(PARTICLE_COUNT * 3);
-        const colors = new Float32Array(PARTICLE_COUNT * 3);
-        initShapes();
-
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-            pos[i*3] = (Math.random()-0.5)*500;
-            pos[i*3+1] = (Math.random()-0.5)*500;
-            pos[i*3+2] = (Math.random()-0.5)*500;
-            let col = new THREE.Color();
-            let r = Math.random();
-            if (r > 0.7) col.setHex(0xffd700); // Gold
-            else if (r > 0.4) col.setHex(0xff0000); // Red
-            else col.setHex(0xffffff);
-            colors[i*3] = col.r; colors[i*3+1] = col.g; colors[i*3+2] = col.b;
+            return data;
         }
 
-        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        particles = new THREE.Points(geo, new THREE.PointsMaterial({size: 0.35, vertexColors: true, blending: THREE.AdditiveBlending}));
-        scene.add(particles);
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.z = 100;
 
-        // Tuyết rơi dày
-        const sGeo = new THREE.BufferGeometry();
-        const sPos = new Float32Array(10000 * 3);
-        for(let i=0; i<30000; i++) sPos[i] = (Math.random()-0.5)*400;
-        sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
-        snow = new THREE.Points(sGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.15}));
-        scene.add(snow);
-    }
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
 
-    // 3. Xử lý nhận diện tay (MediaPipe)
-    const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-    hands.setOptions({maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5});
-    hands.onResults((results) => {
-        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            const point = results.multiHandLandmarks[0][9]; // Lấy vị trí giữa bàn tay
-            handX = (point.x - 0.5) * 150;
-            handY = -(point.y - 0.5) * 100;
+            const geo = new THREE.BufferGeometry();
+            const positions = new Float32Array(P_COUNT * 3);
+            const colors = new Float32Array(P_COUNT * 3);
+            targetPositions = createTreeShape();
+
+            for (let i = 0; i < P_COUNT; i++) {
+                // Tọa độ khởi tạo (bay từ ngoài vào)
+                positions[i*3] = (Math.random()-0.5)*800;
+                positions[i*3+1] = (Math.random()-0.5)*800;
+                positions[i*3+2] = (Math.random()-0.5)*800;
+
+                let col = new THREE.Color();
+                let r = Math.random();
+                if (r > 0.8) col.setHex(0xffd700); // Vàng Gold
+                else if (r > 0.5) col.setHex(0xff0000); // Đỏ Noel
+                else col.setHex(0xffffff); // Trắng
+                colors[i*3] = col.r; colors[i*3+1] = col.g; colors[i*3+2] = col.b;
+            }
+
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            particles = new THREE.Points(geo, new THREE.PointsMaterial({
+                size: 0.35, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true
+            }));
+            scene.add(particles);
+
+            // Thêm hiệu ứng tuyết rơi nền
+            const snowGeo = new THREE.BufferGeometry();
+            const snowPos = new Float32Array(15000 * 3);
+            for(let i=0; i<45000; i++) snowPos[i] = (Math.random()-0.5)*500;
+            snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+            snow = new THREE.Points(snowGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.15}));
+            scene.add(snow);
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX - window.innerWidth/2) / 10;
+                mouseY = (e.clientY - window.innerHeight/2) / 10;
+            });
+
+            animate();
         }
-    });
 
-    // 4. Bắt đầu Magic
-    startBtn.onclick = () => {
-        document.getElementById('start-screen').style.display = 'none';
-        bgm.play();
-        setupThree();
-        const cameraMP = new Camera(videoElement, {
-            onFrame: async () => { await hands.send({image: videoElement}); },
-            width: 640, height: 480
-        });
-        cameraMP.start();
-        animate();
-    };
-
-    function animate() {
-        requestAnimationFrame(animate);
-        const p = particles.geometry.attributes.position.array;
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-            // Hiệu ứng hạt bay theo tay + hình dạng mục tiêu
-            let tx = targetPositions[i*3] + handX;
-            let ty = targetPositions[i*3+1] + handY;
-            let tz = targetPositions[i*3+2];
-            p[i*3] += (tx - p[i*3]) * 0.05;
-            p[i*3+1] += (ty - p[i*3+1]) * 0.05;
-            p[i*3+2] += (tz - p[i*3+2]) * 0.05;
-        }
-        particles.geometry.attributes.position.needsUpdate = true;
-        particles.rotation.y += 0.002;
-        snow.position.y -= 0.2; if(snow.position.y < -200) snow.position.y = 200;
-        renderer.render(scene, camera);
-    }
-
-    window.addEventListener('mousedown', () => { state = (state + 1) % 2; initShapes(); });
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-</script>
-</body>
-</html>
+        function animate() {
+            requestAnimationFrame(animate);
+            const p = particles.geometry.attributes.position.array;
+            for (let i = 0; i < P_COUNT * 3; i++) {
+                p[i] += (targetPositions[i] - p[i]) * 0.05;
+            }
+            particles.geometry.attributes.position.needsUpdate = true;

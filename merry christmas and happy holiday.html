@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Little Gift</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        #ui { 
+            position: absolute; width: 100%; height: 100%; 
+            display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; 
+            z-index: 9999; pointer-events: none; 
+        }
+        .recipient-name { 
+            font-family: 'Dancing Script', cursive; 
+            font-size: 4rem; color: #FFD700; 
+            text-shadow: 0 0 20px #FF4500, 0 0 40px #FFD700;
+            opacity: 0; transition: 3s; margin-bottom: 20px;
+            text-align: center;
+        }
+        .active { opacity: 1; transform: scale(1.05); }
+        button { 
+            pointer-events: auto; padding: 15px 40px; border-radius: 50px; 
+            background: linear-gradient(45deg, #d4af37, #f9f295); 
+            border: none; font-weight: bold; font-size: 1.2rem;
+            cursor: pointer; box-shadow: 0 0 30px yellow;
+            display: flex; align-items: center; gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h1 id="name" class="recipient-name">Gửi tặng [Tên Của Bạn] 🎄</h1>
+        <button id="btn" onclick="startMagic()">MỞ QUÀ DISNEY 🎄 👍</button>
+    </div>
+
+    <audio id="bgm" loop><source src="https://www.chosic.com/wp-content/uploads/2021/11/We-Wish-You-A-Merry-Christmas.mp3" type="audio/mpeg"></audio>
+
+    <script>
+        let scene, camera, renderer, particles, snow, sphere, state = 0;
+        const count = 6000;
+        const colorsList = [0xFFD700, 0xFF3030, 0xFF82AB, 0x7CFC00, 0x87CEFA]; // Vàng, Đỏ, Hồng, Xanh lá, Xanh biển pastel
+
+        function startMagic() {
+            document.getElementById('btn').style.display = 'none';
+            document.getElementById('name').classList.add('active');
+            document.getElementById('bgm').play();
+            init();
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.z = 50;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Tuyết rơi nền
+            const sGeo = new THREE.BufferGeometry();
+            const sPos = [];
+            for(let i=0; i<2000; i++) sPos.push((Math.random()-0.5)*100, Math.random()*100, (Math.random()-0.5)*100);
+            sGeo.setAttribute('position', new THREE.Float32BufferAttribute(sPos, 3));
+            snow = new THREE.Points(sGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.1}));
+            scene.add(snow);
+
+            // Hệ thống hạt đa sắc
+            const pGeo = new THREE.BufferGeometry();
+            const pos = [], giftTargets = [], fireworkTargets = [], sphereTargets = [], colors = [];
+            
+            for(let i=0; i<count; i++) {
+                // Hình hộp quà
+                giftTargets.push((Math.random()-0.5)*10, (Math.random()-0.5)*10, (Math.random()-0.5)*10);
+                
+                // Pháo hoa nổ rộng
+                const r = 30 + Math.random()*10;
+                const theta = Math.random()*Math.PI*2;
+                const phi = Math.random()*Math.PI;
+                fireworkTargets.push(r*Math.sin(phi)*Math.cos(theta), r*Math.sin(phi)*Math.sin(theta), r*Math.cos(phi));
+
+                // Quả cầu tuyết (Sphere)
+                const sr = 15;
+                const stheta = Math.random()*Math.PI*2;
+                const sphi = Math.random()*Math.PI;
+                sphereTargets.push(sr*Math.sin(sphi)*Math.cos(stheta), sr*Math.sin(sphi)*Math.sin(stheta), sr*Math.cos(sphi));
+
+                pos.push(0, 0, 0);
+                const col = new THREE.Color(colorsList[Math.floor(Math.random()*colorsList.length)]);
+                colors.push(col.r, col.g, col.b);
+            }
+
+            pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            pGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            pGeo.userData = { gift: giftTargets, fire: fireworkTargets, sphere: sphereTargets };
+            
+            particles = new THREE.Points(pGeo, new THREE.PointsMaterial({size: 0.2, vertexColors: true, blending: THREE.AdditiveBlending}));
+            scene.add(particles);
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            snow.position.y -= 0.05; if(snow.position.y < -50) snow.position.y = 50;
+            
+            const p = particles.geometry.attributes.position.array;
+            let target;
+            if(state === 0) target = particles.geometry.userData.gift;
+            else if(state === 1) target = particles.geometry.userData.sphere;
+            else target = particles.geometry.userData.fire;
+
+            for(let i=0; i<p.length; i++) p[i] += (target[i] - p[i]) * 0.03;
+            particles.geometry.attributes.position.needsUpdate = true;
+            particles.rotation.y += 0.005;
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('mousedown', () => { 
+            if(state < 2) state++; 
+            else state = 1; // Lặp lại giữa quả cầu và pháo hoa
+        });
+    </script>
+</body>
+</html>

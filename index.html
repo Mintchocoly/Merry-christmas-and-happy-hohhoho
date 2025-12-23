@@ -7,11 +7,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Great+Vibes&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Great Vibes', cursive; }
-        #ui { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; pointer-events: none; }
-        .name-tag { font-size: 4rem; color: #fdf5e6; text-shadow: 0 0 20px #ff0000, 0 0 30px #ffd700; opacity: 0; transition: 4s; text-align: center; margin-bottom: 20px; }
+        body { margin: 0; overflow: hidden; background: #000; cursor: crosshair; }
+        #ui { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; pointer-events: none; }
+        /* Chữ viết tay thơ mộng */
+        .name-tag { font-family: 'Great Vibes', cursive; font-size: 4.5rem; color: #fff; text-shadow: 0 0 20px #ff0000, 0 0 40px #ffd700; opacity: 0; transition: 3s; text-align: center; }
         .active { opacity: 1; }
-        button { pointer-events: auto; padding: 18px 45px; border-radius: 50px; background: linear-gradient(to right, #d4af37, #f9f295, #d4af37); border: none; font-family: 'Dancing Script', cursive; font-size: 1.5rem; cursor: pointer; box-shadow: 0 0 25px gold; transition: 0.3s; }
+        #msg { position: fixed; bottom: 20px; font-family: 'Dancing Script', cursive; color: gold; font-size: 2rem; width: 100%; text-align: center; opacity: 0; }
+        button { pointer-events: auto; padding: 15px 40px; border-radius: 50px; background: linear-gradient(45deg, #d4af37, #f9f295); border: none; font-family: 'Dancing Script', cursive; font-size: 1.5rem; cursor: pointer; box-shadow: 0 0 30px #ffd700; }
     </style>
 </head>
 <body>
@@ -19,20 +21,55 @@
         <h1 id="name" class="name-tag">Gửi tặng [Tên Của Bạn] 🎄</h1>
         <button id="btn" onclick="startMagic()">Mở quà phép thuật ✨</button>
     </div>
+    <div id="msg">Merry Christmas and Happy New Year!</div>
 
     <audio id="bgm" loop>
         <source src="https://www.chosic.com/wp-content/uploads/2021/11/Let-it-snow-Let-it-snow-Let-it-snow.mp3" type="audio/mpeg">
     </audio>
 
     <script>
-        let scene, camera, renderer, points, snow, state = 0;
-        const count = 15000; // Tăng số hạt cực đại cho cây thông và pháo hoa dày đặc
-
+        let scene, camera, renderer, particles, snow, state = 0;
+        const count = 15000; // 15 ngàn hạt sáng lấp lánh
+        let targetPositions = [];
+        
         function startMagic() {
             document.getElementById('btn').style.display = 'none';
             document.getElementById('name').classList.add('active');
-            document.getElementById('bgm').play().catch(() => console.log("Cần click để phát nhạc"));
+            document.getElementById('bgm').play();
             init();
+        }
+
+        function createShape(type) {
+            let pts = [];
+            for (let i = 0; i < count; i++) {
+                let x, y, z;
+                if (type === 0) { // Cây thông Noel khổng lồ
+                    y = (Math.random() - 0.5) * 40;
+                    let r = (20 - y) * 0.45;
+                    let theta = Math.random() * Math.PI * 2;
+                    x = r * Math.cos(theta);
+                    z = r * Math.sin(theta);
+                } else if (type === 1) { // Gingerbread Man (Hình người gừng)
+                    let t = Math.random() * Math.PI * 2;
+                    x = 15 * Math.sin(t) * Math.pow(Math.sin(t/2), 3);
+                    y = 15 * Math.cos(t);
+                    z = (Math.random() - 0.5) * 5;
+                } else if (type === 2) { // Hộp quà chữ thập ruy băng
+                    if (i < count/2) { x = (Math.random()-0.5)*20; y = (Math.random()-0.5)*20; z = (Math.random()-0.5)*20; }
+                    else { // Ruy băng rực rỡ
+                        if (Math.random() > 0.5) { x = (Math.random()-0.5)*22; y = (Math.random()-0.5)*2; z = 11; }
+                        else { x = (Math.random()-0.5)*2; y = (Math.random()-0.5)*22; z = 11; }
+                    }
+                } else if (type === 3) { // Pháo hoa rủ (Tua rua)
+                    let r = 30 * Math.pow(Math.random(), 0.5);
+                    let theta = Math.random() * Math.PI * 2;
+                    x = r * Math.cos(theta);
+                    y = 25 - (r * r) / 20 + (Math.random() * 5); // Hiệu ứng rủ xuống
+                    z = r * Math.sin(theta);
+                }
+                pts.push(x, y, z);
+            }
+            return pts;
         }
 
         function init() {
@@ -43,49 +80,55 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            const pGeo = new THREE.BufferGeometry();
-            const pos = [], targets = [], colors = [];
-            const palette = [0xFF0000, 0x00FF00, 0xFFD700, 0xFFFFFF, 0x87CEFA];
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            targetPositions = createShape(0);
 
-            // Cây thông to lớn lúc đầu
-            for(let i=0; i<count; i++) {
-                const y = Math.random() * 40 - 20;
-                const r = (20 - y) * 0.5;
-                const theta = Math.random() * Math.PI * 2;
-                targets.push(r * Math.cos(theta), y, r * Math.sin(theta));
-                pos.push((Math.random()-0.5)*200, (Math.random()-0.5)*200, (Math.random()-0.5)*200);
-                const c = new THREE.Color(palette[Math.floor(Math.random()*5)]);
-                colors.push(c.r, c.g, c.b);
+            for (let i = 0; i < count; i++) {
+                pos[i*3] = (Math.random()-0.5)*200;
+                pos[i*3+1] = (Math.random()-0.5)*200;
+                pos[i*3+2] = (Math.random()-0.5)*200;
+                let c = new THREE.Color();
+                c.setHSL(Math.random(), 0.8, 0.6); // Đa sắc màu pastel
+                colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
             }
 
-            pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-            pGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-            points = new THREE.Points(pGeo, new THREE.PointsMaterial({size: 0.22, vertexColors: true, blending: THREE.AdditiveBlending}));
-            scene.add(points);
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            particles = new THREE.Points(geo, new THREE.PointsMaterial({size: 0.25, vertexColors: true, blending: THREE.AdditiveBlending}));
+            scene.add(particles);
 
-            // Tuyết rơi dày đặc cổ tích
+            // Tuyết rơi nền
             const sGeo = new THREE.BufferGeometry();
-            const sPos = [];
-            for(let i=0; i<3000; i++) sPos.push((Math.random()-0.5)*150, Math.random()*150, (Math.random()-0.5)*150);
-            sGeo.setAttribute('position', new THREE.Float32BufferAttribute(sPos, 3));
-            snow = new THREE.Points(sGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.12}));
+            const sPos = new Float32Array(2000 * 3);
+            for(let i=0; i<6000; i++) sPos[i] = (Math.random()-0.5)*150;
+            sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+            snow = new THREE.Points(sGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.1}));
             scene.add(snow);
 
+            window.addEventListener('mousedown', nextState);
+            window.addEventListener('touchstart', nextState);
             animate();
+        }
+
+        function nextState() {
+            state = (state + 1) % 4;
+            targetPositions = createShape(state);
+            if (state === 3) document.getElementById('msg').style.opacity = 1;
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            snow.position.y -= 0.08; if(snow.position.y < -75) snow.position.y = 75;
-            points.geometry.attributes.position.needsUpdate = true;
-            points.rotation.y += 0.005;
+            const positions = particles.geometry.attributes.position.array;
+            for (let i = 0; i < count * 3; i++) {
+                positions[i] += (targetPositions[i] - positions[i]) * 0.05;
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+            particles.rotation.y += 0.003;
+            snow.position.y -= 0.05; if(snow.position.y < -50) snow.position.y = 50;
             renderer.render(scene, camera);
         }
-
-        window.addEventListener('mousedown', () => { 
-            state = (state + 1) % 8; 
-            // Mỗi lần click sẽ chuyển qua: Gậy kẹo -> Gingerbread -> Nutcracker -> Pháo hoa rủ...
-        });
     </script>
 </body>
 </html>

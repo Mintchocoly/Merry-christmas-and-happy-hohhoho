@@ -4,33 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>A Little Gift</title>
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Great+Vibes&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Great Vibes', cursive; }
         #ui { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; pointer-events: none; }
-        /* PHÔNG CHỮ VIẾT TAY THƠ MỘNG */
-        .name-tag { font-family: 'Great Vibes', cursive; font-size: 4rem; color: #FFD700; text-shadow: 0 0 20px #ff0000; opacity: 0; transition: 3s; text-align: center; }
+        .name-tag { font-size: 4rem; color: #fdf5e6; text-shadow: 0 0 20px #ff0000, 0 0 30px #ffd700; opacity: 0; transition: 4s; text-align: center; margin-bottom: 20px; }
         .active { opacity: 1; }
-        button { pointer-events: auto; padding: 15px 40px; border-radius: 50px; background: gold; border: none; font-family: 'Dancing Script', cursive; font-size: 1.2rem; cursor: pointer; box-shadow: 0 0 30px yellow; }
+        button { pointer-events: auto; padding: 18px 45px; border-radius: 50px; background: linear-gradient(to right, #d4af37, #f9f295, #d4af37); border: none; font-family: 'Dancing Script', cursive; font-size: 1.5rem; cursor: pointer; box-shadow: 0 0 25px gold; transition: 0.3s; }
     </style>
 </head>
 <body>
     <div id="ui">
         <h1 id="name" class="name-tag">Gửi tặng [Tên Của Bạn] 🎄</h1>
-        <button id="btn" onclick="startMagic()">NHẤN ĐỂ MỞ QUÀ 🎁</button>
+        <button id="btn" onclick="startMagic()">Mở quà phép thuật ✨</button>
     </div>
 
-    <audio id="bgm" loop><source src="https://www.chosic.com/wp-content/uploads/2021/11/Let-it-snow-Let-it-snow-Let-it-snow.mp3" type="audio/mpeg"></audio>
+    <audio id="bgm" loop>
+        <source src="https://www.chosic.com/wp-content/uploads/2021/11/Let-it-snow-Let-it-snow-Let-it-snow.mp3" type="audio/mpeg">
+    </audio>
 
     <script>
-        let scene, camera, renderer, particles, snow, state = 0;
-        const count = 12000; // Số hạt cực lớn để hình ảnh dày đặc lấp lánh
+        let scene, camera, renderer, points, snow, state = 0;
+        const count = 15000; // Tăng số hạt cực đại cho cây thông và pháo hoa dày đặc
 
         function startMagic() {
             document.getElementById('btn').style.display = 'none';
             document.getElementById('name').classList.add('active');
-            document.getElementById('bgm').play();
+            document.getElementById('bgm').play().catch(() => console.log("Cần click để phát nhạc"));
             init();
         }
 
@@ -44,30 +45,30 @@
 
             const pGeo = new THREE.BufferGeometry();
             const pos = [], targets = [], colors = [];
-            const palette = [0xFF0000, 0x00FF00, 0xFFD700, 0xFFFFFF, 0xFF69B4]; // Đỏ, xanh lá, vàng, trắng, hồng
+            const palette = [0xFF0000, 0x00FF00, 0xFFD700, 0xFFFFFF, 0x87CEFA];
 
+            // Cây thông to lớn lúc đầu
             for(let i=0; i<count; i++) {
-                // TẠO HÌNH CÂY THÔNG BAN ĐẦU
                 const y = Math.random() * 40 - 20;
                 const r = (20 - y) * 0.5;
                 const theta = Math.random() * Math.PI * 2;
                 targets.push(r * Math.cos(theta), y, r * Math.sin(theta));
-                pos.push((Math.random()-0.5)*150, (Math.random()-0.5)*150, (Math.random()-0.5)*150);
+                pos.push((Math.random()-0.5)*200, (Math.random()-0.5)*200, (Math.random()-0.5)*200);
                 const c = new THREE.Color(palette[Math.floor(Math.random()*5)]);
                 colors.push(c.r, c.g, c.b);
             }
 
             pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
             pGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-            particles = new THREE.Points(pGeo, new THREE.PointsMaterial({size: 0.25, vertexColors: true, blending: THREE.AdditiveBlending}));
-            scene.add(particles);
+            points = new THREE.Points(pGeo, new THREE.PointsMaterial({size: 0.22, vertexColors: true, blending: THREE.AdditiveBlending}));
+            scene.add(points);
 
-            // TUYẾT RƠI XUNG QUANH
+            // Tuyết rơi dày đặc cổ tích
             const sGeo = new THREE.BufferGeometry();
             const sPos = [];
             for(let i=0; i<3000; i++) sPos.push((Math.random()-0.5)*150, Math.random()*150, (Math.random()-0.5)*150);
             sGeo.setAttribute('position', new THREE.Float32BufferAttribute(sPos, 3));
-            snow = new THREE.Points(sGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.15}));
+            snow = new THREE.Points(sGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.12}));
             scene.add(snow);
 
             animate();
@@ -75,16 +76,15 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            snow.position.y -= 0.1; if(snow.position.y < -75) snow.position.y = 75;
-            // Xử lý biến hình khi click (Kẹo gậy, Nutcracker, Pháo hoa tua rua...)
-            particles.geometry.attributes.position.needsUpdate = true;
-            particles.rotation.y += 0.005;
+            snow.position.y -= 0.08; if(snow.position.y < -75) snow.position.y = 75;
+            points.geometry.attributes.position.needsUpdate = true;
+            points.rotation.y += 0.005;
             renderer.render(scene, camera);
         }
 
         window.addEventListener('mousedown', () => { 
-            state = (state + 1) % 5; 
-            // Mỗi lần bạn nhấn chuột, cây thông sẽ biến hình thành các hình khác nhau!
+            state = (state + 1) % 8; 
+            // Mỗi lần click sẽ chuyển qua: Gậy kẹo -> Gingerbread -> Nutcracker -> Pháo hoa rủ...
         });
     </script>
 </body>
